@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sequence Diagram · Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #F1F5F9;
+      --card:         #FFFFFF;
+      --primary:      #2563EB;
+      --primary-dark: #1D4ED8;
+      --primary-pale: #DBEAFE;
+      --text:         #0F172A;
+      --muted:        #64748B;
+      --border:       #E2E8F0;
+      --radius:       12px;
+      --shadow:       0 1px 3px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.07);
+      --font:  -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --mono:  "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Hero ──────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 55%, #2563EB 100%);
+      color: #fff;
+      padding: 72px 24px 60px;
+      text-align: center;
+    }
+    .hero-inner { max-width: 620px; margin: 0 auto; }
+
+    .hero-tag {
+      display: inline-block;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.85);
+      margin-bottom: 22px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 800;
+      letter-spacing: -.025em;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .hero p {
+      font-size: 1.05rem;
+      color: rgba(255,255,255,.72);
+      line-height: 1.65;
+      margin-bottom: 28px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .pill {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255,255,255,.88);
+    }
+
+    /* ── Layout ────────────────────────────────────────── */
+    main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    .section { margin-bottom: 64px; }
+
+    .section-hd { margin-bottom: 28px; }
+    .section-hd h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      margin-bottom: 4px;
+    }
+    .section-hd p { color: var(--muted); font-size: .95rem; }
+
+    /* ── Example cards ─────────────────────────────────── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 22px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-badge {
+      display: inline-block;
+      background: var(--primary-pale);
+      color: var(--primary);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding: 3px 9px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    .diagram-wrap {
+      overflow-x: auto;
+      min-height: 60px;
+    }
+    .diagram-wrap svg { display: block; overflow: visible; }
+
+    /* ── SVG diagram styles ─────────────────────────────── */
+    .squncDgrm-actor rect {
+      fill: #EFF6FF;
+      stroke: #3B82F6;
+      stroke-width: 1.5px;
+      rx: 6px;
+    }
+    .squncDgrm-actor text {
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 600;
+      fill: #1D4ED8;
+    }
+    .squncDgrm-actor_line {
+      stroke: #CBD5E1;
+      stroke-width: 1.5px;
+      stroke-dasharray: 5 4;
+    }
+    .squncDgrm-signal_line {
+      stroke: #334155;
+      stroke-width: 1.5px;
+    }
+    .squncDgrm-marker_arrow { fill: #334155; }
+    .squncDgrm-signal_message {
+      font-family: var(--mono);
+      font-size: 11px;
+      fill: #1E293B;
+      font-weight: 500;
+    }
+    .squncDgrm-signal_rect {
+      fill: #fff;
+      stroke: #E2E8F0;
+      stroke-width: 1px;
+      rx: 4px;
+    }
+    .squncDgrm-actor:hover rect  { fill: #DBEAFE; transition: fill .15s; }
+    .squncDgrm-signal:hover .squncDgrm-signal_rect { fill: #F0F9FF; }
+
+    /* ── Playground ─────────────────────────────────────── */
+    .playground {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .pane-editor { border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+    .pane-output { display: flex; flex-direction: column; }
+
+    .pane-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #F8FAFC;
+      border-bottom: 1px solid var(--border);
+    }
+    .pane-toolbar span {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+    }
+
+    #pg-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 20px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.75;
+      color: var(--text);
+      background: transparent;
+      resize: none;
+      min-height: 260px;
+    }
+    #pg-input::selection { background: #BFDBFE; }
+
+    .btn-render {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .btn-render:hover { background: var(--primary-dark); }
+    .btn-render:active { transform: scale(.97); }
+
+    #pg-output {
+      padding: 24px;
+      overflow: auto;
+      flex: 1;
+    }
+
+    .parse-error {
+      color: #B91C1C;
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 14px 16px;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      border-radius: 8px;
+    }
+
+    /* ── Syntax reference ───────────────────────────────── */
+    .syntax-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .syntax-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .syntax-code {
+      display: block;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--primary);
+      background: var(--primary-pale);
+      padding: 7px 11px;
+      border-radius: 6px;
+      margin-bottom: 9px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .syntax-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .syntax-arrow {
+      display: inline-block;
+      width: 48px;
+      height: 14px;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 28px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    footer code {
+      font-family: var(--mono);
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    @media (max-width: 720px) {
+      .playground { grid-template-columns: 1fr; }
+      .pane-editor { border-right: none; border-bottom: 1px solid var(--border); }
+      .card-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-tag">v0.0.1 &nbsp;·&nbsp; Demo</div>
+    <h1>Sequence Diagram</h1>
+    <p>A lightweight JavaScript object for rendering UML sequence diagrams as inline SVG — no build step, no dependencies.</p>
+    <div class="pill-row">
+      <span class="pill">Vanilla JS</span>
+      <span class="pill">SVG Output</span>
+      <span class="pill">Zero Dependencies</span>
+      <span class="pill">AngularJS Ready</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Examples ── -->
+  <section class="section">
+    <div class="section-hd">
+      <h2>Examples</h2>
+      <p>Common interaction patterns rendered with <code style="font-family:var(--mono);font-size:.85em;background:var(--border);padding:2px 6px;border-radius:4px">new diagram()</code></p>
+    </div>
+    <div class="card-grid">
+
+      <div class="card">
+        <div class="card-badge">Authentication</div>
+        <h3>User Login</h3>
+        <div class="diagram-wrap" id="d1"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge">Storage</div>
+        <h3>File Upload</h3>
+        <div class="diagram-wrap" id="d2"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-badge">Commerce</div>
+        <h3>Order Checkout</h3>
+        <div class="diagram-wrap" id="d3"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Playground ── -->
+  <section class="section">
+    <div class="section-hd">
+      <h2>Live Editor</h2>
+      <p>Edit the input and click Render to try your own diagrams</p>
+    </div>
+    <div class="playground">
+
+      <div class="pane-editor">
+        <div class="pane-toolbar">
+          <span>Input</span>
+          <button class="btn-render" onclick="renderPlayground()">&#9654;&nbsp; Render</button>
+        </div>
+        <textarea id="pg-input" spellcheck="false">Browser->Server: GET /api/data
+Server->Cache: Check cache
+Cache->Server: Cache miss
+Server->Database: SELECT data
+Database->Server: Results
+Server->Cache: Store results
+Cache->Server: Stored
+Server->Browser: JSON response</textarea>
+      </div>
+
+      <div class="pane-output">
+        <div class="pane-toolbar"><span>Output</span></div>
+        <div id="pg-output"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Syntax ── -->
+  <section class="section">
+    <div class="section-hd">
+      <h2>Syntax Reference</h2>
+      <p>Each line follows the pattern <code style="font-family:var(--mono);font-size:.85em;background:var(--border);padding:2px 6px;border-radius:4px">ActorA ARROW ActorB: Message</code></p>
+    </div>
+    <div class="syntax-grid">
+      <div class="syntax-card">
+        <code class="syntax-code">A->B: Message</code>
+        <div class="syntax-label">Right arrow &nbsp;→&nbsp; forward call</div>
+      </div>
+      <div class="syntax-card">
+        <code class="syntax-code">A&lt;-B: Message</code>
+        <div class="syntax-label">Left arrow &nbsp;←&nbsp; response / reply</div>
+      </div>
+      <div class="syntax-card">
+        <code class="syntax-code">A&lt;>B: Message</code>
+        <div class="syntax-label">Bidirectional &nbsp;↔&nbsp; two-way</div>
+      </div>
+      <div class="syntax-card">
+        <code class="syntax-code">A--B: Message</code>
+        <div class="syntax-label">No arrow &nbsp;—&nbsp; association</div>
+      </div>
+      <div class="syntax-card">
+        <code class="syntax-code">A-->B: Message</code>
+        <div class="syntax-label">3-char arrow &nbsp;·&nbsp; sets dashed flag</div>
+      </div>
+      <div class="syntax-card">
+        <code class="syntax-code">A&lt;->B: Message</code>
+        <div class="syntax-label">3-char bidir &nbsp;↔&nbsp; dashed flag</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p><code>sequenceDiagram.js</code> &nbsp;·&nbsp; Renders via <code>new diagram()</code> &nbsp;·&nbsp; SVG output</p>
+</footer>
+
+<script src="sequenceDiagram.js"></script>
+<script>
+  function renderDiagram(containerId, input) {
+    var d = new diagram();
+    d.setContainerDiv(containerId);
+    d.parse(input);
+    d.draw();
+  }
+
+  function renderPlayground() {
+    var input = document.getElementById('pg-input').value;
+    var out = document.getElementById('pg-output');
+    out.innerHTML = '';
+    try {
+      renderDiagram('pg-output', input);
+    } catch(e) {
+      out.innerHTML = '<div class="parse-error">Error: ' + e.message + '</div>';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+
+    renderDiagram('d1',
+      'Browser->AuthServer: POST /login\n' +
+      'AuthServer->Database: SELECT user\n' +
+      'Database->AuthServer: User record\n' +
+      'AuthServer->Browser: 200 OK + JWT'
+    );
+
+    renderDiagram('d2',
+      'Client->APIServer: POST /upload\n' +
+      'APIServer->Storage: Write file\n' +
+      'Storage->APIServer: File URL\n' +
+      'APIServer->Database: Save metadata\n' +
+      'APIServer->Client: 201 Created'
+    );
+
+    renderDiagram('d3',
+      'Customer->Store: Place order\n' +
+      'Store->Payment: Charge card\n' +
+      'Payment->Store: Authorized\n' +
+      'Store->Warehouse: Fulfill order\n' +
+      'Warehouse->Store: Shipped\n' +
+      'Store->Customer: Confirmation'
+    );
+
+    renderPlayground();
+  });
+</script>
+</body>
+</html>

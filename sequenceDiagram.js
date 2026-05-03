@@ -2,8 +2,14 @@
 	sequenceDiagram.js
 	v0.0.1
 */
+'use strict';
 let diagram = function () 
 {
+	var uid = 'sqd-' + Math.random().toString(36).slice(2,7);
+	this.uid        = uid;
+  	this.filterId   = uid + '-shadow';
+  	this.markerRId  = uid + '-right';
+  	this.markerLId  = uid + '-left';
 	this.ns = "http://www.w3.org/2000/svg";
 	this.actors=[];
 	this.actorsPos={};
@@ -19,9 +25,11 @@ let diagram = function ()
 	this.classRoot="squncDgrm"
 	this.dClass={actor:[],signal:[]};
 	this.markers={left:createMarker(this,document.createElementNS(this.ns,'marker'),"M 10 0 L 0 5 L 10 10 Z",0,5),right:createMarker(this,document.createElementNS(this.ns,'marker'),"M 0 0 L 10 5 L 0 10 Z",10,5)};
-	this.markers.left.setAttribute("id","leftArrow");
-	this.markers.right.setAttribute("id","rightArrow");
+	this.markers.left.setAttribute("id",this.markerLId);
+	this.markers.right.setAttribute("id",this.markerRId);
 	this.filter=createFilter(this,document.createElementNS(this.ns,'filter'));
+	this.parseFunc=[];
+	this.parserRules=[];
 	function createMarker($this,marker,moveToPath,x,y)
 	{	
 		marker.setAttribute("markerWidth",5);
@@ -30,7 +38,7 @@ let diagram = function ()
 		marker.setAttribute("refX",x);
 		marker.setAttribute("refY",y);
 		marker.setAttribute("class","squncDgrm-marker_arrow");
-		path=document.createElementNS($this.ns,'path');
+		var path=document.createElementNS($this.ns,'path');
 		path.setAttribute("d",moveToPath);
 		marker.appendChild(path);
 
@@ -38,23 +46,23 @@ let diagram = function ()
 	}
 	function createFilter($this,filter)
 	{
-		filter.setAttribute('id','dropshadow');
+		filter.setAttribute('id',$this.filterId);
 		filter.setAttribute('height','130%');
-		fgb=document.createElementNS($this.ns,'feGaussianBlur');
+		var fgb=document.createElementNS($this.ns,'feGaussianBlur');
 		fgb.setAttribute('in','SourceAlpha');
 		fgb.setAttribute('stdDeviation',3);
-		fo=document.createElementNS($this.ns,'feOffset');
+		var fo=document.createElementNS($this.ns,'feOffset');
 		fo.setAttribute('dx',2);
-		fo.setAttribute('dx',2);
+		fo.setAttribute('dy',2);
 		fo.setAttribute('result','offsetblur');
-		fct=document.createElementNS($this.ns,'feComponentTransfer');
-		ffa=document.createElementNS($this.ns,'feFuncA');
+		var fct=document.createElementNS($this.ns,'feComponentTransfer');
+		var ffa=document.createElementNS($this.ns,'feFuncA');
 		ffa.setAttribute('type','linear');
 		ffa.setAttribute('slope',0.5);
 		fct.appendChild(ffa);
-		fm=document.createElementNS($this.ns,'feMerge');
+		var fm=document.createElementNS($this.ns,'feMerge');
 		fm.appendChild(document.createElementNS($this.ns,'feMergeNode'));
-		fmn=document.createElementNS($this.ns,'feMergeNode');
+		var fmn=document.createElementNS($this.ns,'feMergeNode');
 		fmn.setAttribute("in","SourceGraphic");
 		fm.appendChild(fmn);
 		filter.appendChild(fgb);
@@ -66,15 +74,15 @@ let diagram = function ()
 }
 diagram.signal = function(signal,a,b,message)
 {
+	var $this=this;
 	this.setProperty=function(key,value)
 	{
 		$this[key]=value;
 	};
-	$this=this;
 	this.actorA=a;
 	this.actorB=b;
 	this.message=message;
-	t=0;
+	var t=0;
 	if(signal[0]=="<")
 		t+=1;
 	if(signal[signal.length-1]==">")
@@ -110,7 +118,7 @@ diagram.prototype.getActor = function(key,actor)
 	if(typeof this.actors[this.actorsPos[key]] != "undefined") return this.actors[this.actorsPos[key]];
 	else if(typeof actor !="undefined")
 	{
-		index=this.actors.length;
+		var index=this.actors.length;
 		this.actors.push(actor);
 		this.actorsPos[key]=index;
 	}
@@ -130,29 +138,28 @@ diagram.prototype.setContainerDiv = function (div)
 };
 diagram.prototype.parse = function(input)
 {
-	var c=0;
 	var pattern=/^(")?(.*?)\1([<>-]{2,3})(")?(.*?)\4:(.*)$/;
-	parts=input.split(/\r|\n/);
+	var parts=input.split(/\r|\n/);
 	var $this=this;
 	parts.forEach( function (item)
 	{
-		offA=0;
-		offB=0;
-		matches=item.match(pattern);
-		if(matches[1] =='"')
-			offA=1;
-		if(matches[3+offA] =='"')
-			offB=offA+1;
-		a=new diagram.actor(matches[1+offA],matches[1+offA]);
-		b=new diagram.actor(matches[3+offB],matches[3+offB]);
-		a=$this.getActor(matches[1+offA],a);
-		b=$this.getActor(matches[3+offB],b);
+		var matches=item.match(pattern);
+		if(!matches) return;
+		var actorAKey=matches[2];
+		var signalStr=matches[3];
+		var actorBKey=matches[5];
+		var message=matches[6].trim();
+		var a=new diagram.actor(actorAKey,actorAKey);
+		var b=new diagram.actor(actorBKey,actorBKey);
+		a=$this.getActor(actorAKey,a);
+		b=$this.getActor(actorBKey,b);
+		var signal;
 		if($this.actorsPos[a.key]>$this.actorsPos[b.key])
 		{
-			signal=new diagram.signal(matches[2+offA],b,a,matches[4+offB]);
+			signal=new diagram.signal(flipSignal(signalStr),b,a,message);
 			signal.setProperty("backref",true);
 		}
-		else signal=new diagram.signal(matches[2+offA],a,b,matches[4+offB]);
+		else signal=new diagram.signal(signalStr,a,b,message);
 		$this.getSignal(signal);
 	});
 };
@@ -189,11 +196,11 @@ diagram.prototype.draw = function ()
 	svg.setAttribute("version","1.1");
 	svg.setAttribute("class",this.classRoot);
 	svg.appendChild(this.filter);
-	$this=this;
+	var $this=this;
 	this.container.appendChild(svg);
 	this.actors.forEach(function (actor)
 	{ 
-		xw=$this.drawActor(svg,x,y,actor);
+		var xw=$this.drawActor(svg,x,y,actor);
 		x=x+xw+$this.minXGap;
 	});
 	y=y+$this.minHeight+this.signalHeight;
@@ -218,6 +225,7 @@ diagram.prototype.createLine=function(x,y,x2,y2,line,opt)
 }
 diagram.prototype.createBox=function(x,y,box)
 {
+	var $this=this;
 	box.setAttributeNS(null,'x',x);
 	box.setAttributeNS(null,'y',y);
 	box.setAttributeNS(null, 'width', $this.minWidth);
@@ -226,7 +234,8 @@ diagram.prototype.createBox=function(x,y,box)
 }
 diagram.prototype.drawActor = function (svg,x,y,actor)
 {
-	createBox=function(x,y,box)
+	var $this=this;
+	var createBox=function(x,y,box)
 	{
 		box.setAttributeNS(null,'x',x);
 		box.setAttributeNS(null,'y',y);
@@ -244,11 +253,11 @@ diagram.prototype.drawActor = function (svg,x,y,actor)
 	var tg=document.createElementNS(this.ns,"g");
 	var bg=document.createElementNS(this.ns,"g");
 	tg.setAttribute("class","squncDgrm-actor "+clss);
-	tg.setAttribute("style","filter:url(#dropshadow)");
+	tg.setAttribute("style","filter:url(#"+this.filterId+")");
 	bg.setAttribute("class","squncDgrm-actor "+clss);
-	bg.setAttribute("style","filter:url(#dropshadow)");
-	txt= document.createElementNS(this.ns,"text");
-	btxt= document.createElementNS(this.ns,"text");
+	bg.setAttribute("style","filter:url(#"+this.filterId+")");
+	var txt=document.createElementNS(this.ns,"text");
+	var btxt=document.createElementNS(this.ns,"text");
 	txt.setAttribute('fill', '#000');
 	txt.setAttribute("text-anchor","middle");
 	txt.textContent=actor.name;
@@ -263,9 +272,9 @@ diagram.prototype.drawActor = function (svg,x,y,actor)
 	var xwidth = bbox.width+16;	
 	actor.x_pos=x+xwidth/2;
 	line=this.createLine(x+xwidth/2,y+$this.minHeight,x+xwidth/2,y+yOffset,line)
-	line.setAttribute('id',"actorLine_"+actor.key);
+	line.setAttribute('id',this.uid+"-actorLine_"+actor.key);
 	line.setAttribute('class','squncDgrm-actor_line')
-	actor.width=xwidth;	
+	actor.width=xwidth;
 	txt.setAttribute('x', x+xwidth/2);//50% rect width
 	txt.setAttribute('y', y+18);//75% rect width
 	rect.setAttributeNS(null, 'width', xwidth);
@@ -281,28 +290,28 @@ diagram.prototype.drawActor = function (svg,x,y,actor)
 	else svg.appendChild(bg);
 
 	svg.appendChild(line);
-	tg.setAttribute('id',"actorTop_"+actor.key);
-	bg.setAttribute('id',"actorBottom_"+actor.key);
-	actor.svgT="actorTop_"+actor.key;
-	actor.svgL="actorLine_"+actor.key;
-	actor.svgB="actorBottom_"+actor.key;
+	tg.setAttribute('id',this.uid+"-actorTop_"+actor.key);
+	bg.setAttribute('id',this.uid+"-actorBottom_"+actor.key);
+	actor.svgT=this.uid+"-actorTop_"+actor.key;
+	actor.svgL=this.uid+"-actorLine_"+actor.key;
+	actor.svgB=this.uid+"-actorBottom_"+actor.key;
 	return xwidth;
 };
 diagram.prototype.drawSignal = function (svg,y,signal)
 {
 
-	line=document.createElementNS(this.ns,'line');
+	var line=document.createElementNS(this.ns,'line');
 	line.setAttribute('x1',signal.actorA.x_pos);
 	line.setAttribute('x2',signal.actorB.x_pos);
 	line.setAttribute('y1',y);
 	line.setAttribute('y2',y);
 	line.setAttribute('stroke', '#000');
 	line.setAttribute('class','squncDgrm-signal_line');
-	line.setAttribute('id','signal-line-'+signal.index);
-	g=document.createElementNS(this.ns,'g');
+	line.setAttribute('id',this.uid+'-signal-line-'+signal.index);
+	var g=document.createElementNS(this.ns,'g');
 	g.setAttribute('class','squncDgrm-signal');
-	g.setAttribute('id','signal-group-'+signal.index);
-	txt=document.createElementNS(this.ns,'text');
+	g.setAttribute('id',this.uid+'-signal-group-'+signal.index);
+	var txt=document.createElementNS(this.ns,'text');
 	txt.setAttribute('fill', '#000');
 	txt.setAttribute("text-anchor","middle");
 	txt.setAttribute('x',(signal.actorA.x_pos+signal.actorB.x_pos)/2);
@@ -311,13 +320,13 @@ diagram.prototype.drawSignal = function (svg,y,signal)
 	txt.setAttribute('class','squncDgrm-signal_message');
 	switch(signal.direction)
 	{
-		case "left": line.setAttribute("marker-start","url(#leftArrow)");
+		case "left": line.setAttribute("marker-start","url(#" + this.markerLId + ")");
 			break;
-		case "right": line.setAttribute("marker-end","url(#rightArrow)");
+		case "right": line.setAttribute("marker-end","url(#" + this.markerRId + ")");
 			break;
 		case "bi": 
-			line.setAttribute("marker-start","url(#leftArrow)");
-			line.setAttribute("marker-end","url(#rightArrow)");
+			line.setAttribute("marker-start","url(#" + this.markerLId + ")");
+			line.setAttribute("marker-end","url(#" + this.markerRId + ")");
 			break;
 	}
 	svg.appendChild(line);
@@ -329,15 +338,14 @@ diagram.prototype.drawSignal = function (svg,y,signal)
 	var bbox = txt.getBBox();
 	var w=bbox.width+64;//buffer of 32px either side
 	var delta=signal.actorB.x_pos-signal.actorA.x_pos;
-	if(w>delta )
+	if(w>delta)
 	{
+		var shiftFrom=this.actorsPos[signal.actorB.key];
 		delta=w-delta;
-
 		this.shiftActors(signal.actorB,delta);
 		line.setAttribute('x2',signal.actorB.x_pos);
 		txt.setAttribute('x',(signal.actorA.x_pos+signal.actorB.x_pos)/2);
-		if(typeof signal.backref !="undefined")
-			this.shiftSignals(signal,signal.actorB)
+		this.shiftSignals(signal,shiftFrom);
 	}
 	var box=this.createBox(signal.actorA.x_pos+24+(signal.actorB.x_pos-signal.actorA.x_pos-w)/2,y-this.minHeight/2,document.createElementNS(this.ns,'rect'));
 	box.setAttribute('width',w-48);
@@ -345,24 +353,38 @@ diagram.prototype.drawSignal = function (svg,y,signal)
 	box.setAttribute('class','squncDgrm-signal_rect');
 	g.insertBefore(box,g.childNodes[g.childNodes.length-1]);
 }
-diagram.prototype.shiftSignals=function(signal,actor)
+function flipSignal(s) 
 {
-	$this=this;
-	for(i=signal.index;i>0 && (this.signals[i].actorA.key==actor.key || this.signals[i].actorB.key==actor.key);i--)
+      var hasLeft  = s[0] === '<';
+      var hasRight = s[s.length - 1] === '>';
+      if (hasLeft === hasRight) return s;  // bi or none — unchanged
+      return (hasRight ? '<' : '-') + s.slice(1, -1) + (hasLeft ? '>' : '-');
+}
+diagram.prototype.shiftSignals=function(signal,shiftedActorIndex)
+{
+	var $this=this;
+	for(var i=0;i<signal.index;i++)
 	{
-		var dsig=document.getElementById('signal-line-'+i);
-		var delta=Math.abs(parseFloat(dsig.getAttribute("x1"))-$this.signals[i].actorA.x_pos);
-		dsig.setAttribute("x1",$this.signals[i].actorA.x_pos);
-		dsig.setAttribute("x2",$this.signals[i].actorB.x_pos);
-		var dg=document.getElementById('signal-group-'+i);
-		dg.childNodes.forEach(function (ele){ele.setAttribute("x",parseFloat(ele.getAttribute("x"))+delta);});
+		var sig=$this.signals[i];
+		var aIdx=$this.actorsPos[sig.actorA.key];
+		var bIdx=$this.actorsPos[sig.actorB.key];
+		if(aIdx<shiftedActorIndex && bIdx<shiftedActorIndex) continue;
+		var dsig=document.getElementById($this.uid+'-signal-line-'+i);
+		var dg=document.getElementById($this.uid+'-signal-group-'+i);
+		dsig.setAttribute("x1",sig.actorA.x_pos);
+		dsig.setAttribute("x2",sig.actorB.x_pos);
+		var midX=(sig.actorA.x_pos+sig.actorB.x_pos)/2;
+		var children=dg.childNodes;
+		children[children.length-1].setAttribute("x",midX);
+		var rectW=parseFloat(children[0].getAttribute("width"));
+		children[0].setAttribute("x",midX-rectW/2);
 	}
 }
 diagram.prototype.shiftActors=function(actor,delta)
 {
 	this.shifted=true;
-	var i=this.actorsPos[actor.key];
-	for(i=this.actorsPos[actor.key];i<this.actors.length;i++)
+	
+	for(var i=this.actorsPos[actor.key];i<this.actors.length;i++)
 	{
 		this.actors[i].x_pos+=delta;
 		var tg=document.getElementById(this.actors[i].svgT);
